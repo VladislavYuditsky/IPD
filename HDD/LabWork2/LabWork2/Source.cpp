@@ -68,7 +68,7 @@ void getDeviceInfo(HANDLE diskHandle, STORAGE_PROPERTY_QUERY storageProtertyQuer
 void getMemoryInfo() {
 
 	int n;
-	char dd[5];
+	char dd[4];
 	DWORD dr = GetLogicalDrives();
 
 	unsigned __int64 totalNumberOfBytes = 0;
@@ -77,26 +77,26 @@ void getMemoryInfo() {
 	unsigned __int64 totalNumberOfFreeBytes = 0;
 	unsigned __int64 totalNumberOfFreeBytesOnDisk = 0;
 
-	unsigned __int64 freeBytesAvailable = 0;
-	unsigned __int64 freeBytesAvailableOnDisk = 0;
-
 	for (int i = 0; i < 26; i++)
 	{
 		n = ((dr >> i) & 0x00000001);
 		if (n == 1)
 		{
-			dd[0] = char(65 + i); dd[1] = ':'; dd[2] = '\\'; dd[3] = '\\'; dd[4] = '\0';
-			/*qDebug() << "Available disk drives : " << dd;*/
+			dd[0] = char(65 + i); dd[1] = ':'; dd[2] = '\\'; dd[3] = '\0';
 		}
 		else continue;
 		bool GetDiskFreeSpaceFlag = GetDiskFreeSpaceExA(dd,
-			(PULARGE_INTEGER)& freeBytesAvailableOnDisk,
+			0,
 			(PULARGE_INTEGER)& totalNumberOfBytesOnDisk,
 			(PULARGE_INTEGER)& totalNumberOfFreeBytesOnDisk);
 		if (GetDiskFreeSpaceFlag != 0)
 		{
 			totalNumberOfBytes += totalNumberOfBytesOnDisk;
 			totalNumberOfFreeBytes += totalNumberOfFreeBytesOnDisk;
+			cout << "Total memory on " << dd << totalNumberOfBytesOnDisk << " bytes(" << (double)totalNumberOfBytesOnDisk / (1024 * 1024 * 1024) << " Gb)" << endl;
+			cout << "Free memory on " << dd << totalNumberOfFreeBytesOnDisk << " bytes(" << (double)totalNumberOfFreeBytesOnDisk / (1024 * 1024 * 1024) << " Gb)" << endl;
+			cout << "Occupied memory on " << dd << totalNumberOfBytesOnDisk - totalNumberOfFreeBytesOnDisk << " bytes(" << (double)(totalNumberOfBytesOnDisk - totalNumberOfFreeBytesOnDisk) / (1024 * 1024 * 1024) << " Gb)" << endl;
+			cout << endl;
 		}
 	}
 
@@ -164,7 +164,6 @@ void getAtaPioDmaSupportStandarts(HANDLE diskHandle) {
 		dmaSupportedBytes = dmaSupportedBytes << 1;
 	}
 
-
 	//Анализируем полученный массив бит. 
 	cout << "  - DMA Support: ";
 	for (int i = 0; i < 8; i++) {
@@ -211,13 +210,12 @@ void getMemoryTransferMode(HANDLE diskHandle, STORAGE_PROPERTY_QUERY storageProt
 		//Вывод режима доступа к памяти
 		cout << "  - Transfer mode: ";
 		adapterDescriptor.AdapterUsesPio ? cout << "PIO" : cout << "DMA";
-		cout << setw(29) << "|" << endl;
 	}
 }
 
-void init(HANDLE& diskHandle, char* name) {
+void init(HANDLE& diskHandle, string name) {
 	//Открытие файла с информацией о диске 
-	diskHandle = CreateFile(name, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL);
+	diskHandle = CreateFile(name.c_str(), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL);
 	if (diskHandle == INVALID_HANDLE_VALUE) {
 		cout << "Done..";
 		_getch();
@@ -232,17 +230,9 @@ int main()
 	storagePropertyQuery.PropertyId = StorageDeviceProperty;	//Флаг, гооврящий мы хотим получить дескриптор устройства. 
 	HANDLE diskHandle;
 
-	const string name = "//./PhysicalDrive";
-	int number = 0;
+	const string name = "//./PhysicalDrive0";
 
-	stringstream* res_name = new stringstream;
-
-	*res_name << name << number;
-
-	init(diskHandle, (char*)res_name->str().c_str());
-
-	delete res_name;
-	res_name = new stringstream;
+	init(diskHandle, name);
 
 	getDeviceInfo(diskHandle, storagePropertyQuery);
 	getMemoryInfo();
